@@ -1,0 +1,254 @@
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet"
+          href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.socket.io/4.1.2/socket.io.min.js"
+            integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg"
+            crossorigin="anonymous"></script>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+    <script src="/static/js/jquery.tablesorter.combined.js"></script>
+
+    <link rel="stylesheet" href="/static/css/index.css">
+    <link rel="stylesheet" href="/static/css/prism.css">
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/prism.js"></script>
+    <script defer data-domain="aprs-repeat.hemna.com" src="http://cloud.hemna.com:7000/js/script.js"></script>
+
+    <script type="text/javascript">
+            var initial_stats = {{ initial_stats|tojson|safe }};
+
+            $(document).ready(function() {
+                console.log(initial_stats);
+                start_update();
+
+                $("#toggleStats").click(function() {
+                    $("#jsonstats").fadeToggle(1000);
+                });
+
+                $("#jsonstats").fadeToggle(1000);
+
+                $('.ui.accordion').accordion({exclusive: false});
+                $('.menu .item').tab('change tab', 'main-tab');
+
+    const layerList = document.getElementById('mapmenu');
+    const inputs = layerList.getElementsByTagName('input');
+
+            });
+    </script>
+</head>
+
+<body>
+
+<div class="ui">
+    <a href="https://www.patreon.com/WB4BOR?fan_landing=true"><img
+            class="ui small left floated image" src="/static/images/WB4BOR.png"></a>
+</div>
+
+<div id="header">
+
+    <div class='ui text container'>
+        <h1 class='ui header'><a href="/">APRS REPEAT service {{ version }}</a></h1>
+        <h4 class="ui dividing header"><a href="https://github.com/craigerl/aprsd#aprsd---ham-radio-aprs-is-message-plugin-server" target="_blank" rel="noopener noreferrer">APRSD</a>
+            Version {{ aprsd_version }}</h4>
+
+        <div class='ui grid text container'>
+            <div class='left floated eight wide column'>
+                <span style='color: green'>{{ callsign }}</span>
+                connected to
+                <span style='color: blue' id='aprs_connection'>{{ aprs_connection|safe }}</span>
+            </div>
+            <div class='right floated four wide column'><span
+                    id='uptime'>NONE</span></div>
+            <br>
+            <div class="center floated four wide column">
+                <a href="https://www.twitter.com/wb4bor">
+                    <img style="width:20px;height:20px;" src="/static/images/twitter_logo_64.png"/>@WB4BOR</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Tab links -->
+<div class="ui top attached tabular menu">
+    <div class="item" data-tab="main-tab">Nearest Repeater</div>
+    <div class="item" data-tab="seen-tab">Callsigns using REPEAT</div>
+    <div class="item" data-tab="contact-tab">
+        Contact Information&nbsp;&nbsp;
+        <img style="width:75px;height:32px;" src="/static/images/slack_sm.png"
+             class="ui image"/>&nbsp;
+        <img style="width:32px;height:32px;"
+             src="/static/images/twitter_logo_64.png" class="ui image"/>
+        &nbsp;&nbsp;
+        <img style="width:32px;height:32px;"
+             src="/static/images/patreon_logo_sm.png" class="ui image"/>
+    </div>
+</div>
+
+<!-- Tab data -->
+
+<div class="ui bottom attached tab segment" data-tab="main-tab">
+    <h3 class="ui dividing header">Welcome to the Ham Radio APRS REPEAT Service
+        web
+        information</h3>
+    <br>
+    <div>Help support This APRS Service by joining Patreon page
+        <a href="https://www.patreon.com/WB4BOR?fan_landing=true">WB4BOR
+            Patreon</a>
+    </div>
+    <br>
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/3kcmkaLcKNk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <br><br>
+    <div>Send an APRS Message <b>n 2m +echolink</b> to <b>REPEAT</b> and get
+        back
+        the closes 2 meter repeater that supports EchoLink.
+    </div>
+    <br>
+    <h2 class="ui header">Features</h2>
+    <div class="ui list">
+        <div class="item">
+            This APRS service provides replies to APRS requests to provide
+            a list of closest repeaters to the calling users's last Beacon.
+        </div>
+        <div class="item">
+            This plugin allows filter on HAM radio frequency band, as well as
+            capabilities of the repeaters.
+        </div>
+        <div class="item">
+            Defaults to the 2m frequency band
+        </div>
+    </div>
+
+    <h2 id="usage-format">Usage Format</h2>
+    <p>This is the message format accepted. [] denotes optional.</p>
+    <p>Format:</p>
+    <ul class="ui list">
+        <li> &lt;n[earest]&gt; [Num Stations] [Band] [Filters]</li>
+    </ul>
+    <h2 id="command-parts">Command parts</h2>
+    <ul class="ui list">
+        <li> &lt;n[earest]&gt; - The command that this plugin requires to be
+            used. The full command name is 'nearest', but a simple 'n' works.
+        </li>
+        <li> [Num Stations] - The number of stations to return. Default is 1. Max is 10.
+        </li>
+        <li> [Band] - The fequency Band to use. Default is 2m. See:
+            frequencies_
+        </li>
+        <li> [Filters] - One or more filters in the format of +[capability] See:
+            capabilities_
+        </li>
+    </ul>
+    <h2 id="example-usage">Example Usage</h2>
+    <ul class="ui list">
+        <li> 'nearest 2m' - Find the closest 2m station to my last APRS beacon </li>
+        <li> 'n' - Same as above.</li>
+        <li> 'nearest 2 2m' - the 2 closest 2meter band stations to my last APRS
+            beacon
+        </li>
+        <li> 'n 2 2m' - Same as above.</li>
+        <li> 'n 3' - The 3 closest 2meter repeaters.  2 meters is the Default band.</li>
+        <li> 'n 70cm' - The closest 70cm station to my last APRS Beacon.</li>
+        <li> 'n +echolink' - The closest echolink repeater to my last APRS
+            Beacon.
+        </li>
+        <li> 'n +echo' - The closest echolink repeater to my last APRS Beacon. </li>
+        <li> 'n +dstar' - find the closest repeater that supports dstar</li>
+    </ul>
+    <br><br>
+    <h2 id="list-of-frequency-bands-supported">List of Frequency bands
+        supported</h2>
+    <ul class="ui list">
+        <li>160m - 160 Meters (1.8-2.0 MHz)</li>
+        <li>80m - 80 Meters (3.5-4.0 MHz)</li>
+        <li>60m - 60 Meters (5 MHz)</li>
+        <li>40m - 40 Meters (7.0 - 7.3 MHz)</li>
+        <li>30m - 30 Meters(10.1 - 10.15 MHz)</li>
+        <li>20m - 20 Meters(14.0 - 14.35 MHz)</li>
+        <li>17m - 17 Meters(18.068 - 18.168 MHz)</li>
+        <li>15m - 15 Meters(21.0 - 21.45 MHz)</li>
+        <li>12m - 12 Meters(24.89 - 24.99 MHz)</li>
+        <li>10m - 10 Meters(28 - 29.7 MHz)</li>
+        <li>6m - 6 Meters(50 - 54 MHz)</li>
+        <li>2m - 2 Meters(144 - 148 MHz) -- DEFAULT</li>
+        <li>1.25m - 1.25 Meters(222 - 225 MHz)</li>
+        <li>70cm - 70 Centimeters(420 - 450 MHz)</li>
+        <li>33cm - 33 Centimeters(902 - 928 MHz)</li>
+        <li>23cm - 23 Centimeters(1240 - 1300 MHz)</li>
+        <li>13cm - 13 Centimeters(2300 - 2310 and 2390 - 2450 MHz)</li>
+        <li>9cm - 9 centimeters(3300-3500 MHz)</li>
+        <li>5cm - 5 Centimeters(5650.0 - 5925.0 MHz)</li>
+        <li>3cm - 3 Centimeters(10000.000 - 10500.000 MHz )</li>
+    </ul>
+    <h2 id="list-of-capabilities-supported">List of filters supported</h2>
+    <p>These are the capabilities that can be used as a filter in the command
+        string:</p>
+    <ul class="ui list">
+        <li>allstar</li>
+        <li>ares</li>
+        <li>dmr</li>
+        <li>dstar</li>
+        <li>echolink</li>
+        <li>echo - Same as above (echolink)</li>
+        <li>irlp</li>
+        <li>races</li>
+        <li>skywarn</li>
+        <li>wires</li>
+    </ul>
+</div>
+
+<div class="ui bottom attached tab segment" data-tab="seen-tab">
+    <h3 class="ui dividing header">
+        Callsign Seen List (<span id="seen_count">{{ seen_count }}</span>)
+    </h3>
+    <div id="seenDiv" class="ui mini text">Loading</div>
+</div>
+
+<div class="ui bottom attached tab segment" data-tab="contact-tab">
+    <h3 class="ui dividing header">Contact Information</h3>
+    <div class="ui">
+        <h4 class="ui dividing header">Patreon
+            <a href="https://www.patreon.com/wb4bor">
+                <img style="width:40px;height:40px;" src="/static/images/patreon_logo_sm.png"/>
+            </a>
+        </h4>
+        <div> Support APRSD and REPEAT Service
+            <a href="https://www.patreon.com/wb4bor">@WB4BOR</a>
+        </div>
+        <h4 class="ui dividing header">Slack Server&nbsp;
+            <a href="https://hemna.slack.com/app_redirect?channel=C01KQSCP5RP">
+                <img style="width:149px;height:20px;"
+                     src="https://img.shields.io/badge/slack-@hemna/aprsd-blue.svg?logo=slack"/>
+            </a>
+        </h4>
+        If you want to discuss APRSD or the REPEAT service feel free to join the
+        slack discussion here:
+        <a href="https://hemna.slack.com/app_redirect?channel=C01KQSCP5RP">
+            https://hemna.slack.com/app_redirect?channel=C01KQSCP5RP
+        </a>
+        <h4 class="ui dividing header">Twitter
+            <a href="https://www.twitter.com/wb4bor">
+                <img style="width:40px;height:40px;" src="/static/images/twitter_logo_64.png"/>
+            </a>
+        </h4>
+        <div>You can also follow me on Twitter
+            <a href="https://www.twitter.com/wb4bor">@WB4BOR</a>
+        </div>
+    </div>
+</div>
+
+<div id="badges" class="ui text container">
+    <a href="https://badge.fury.io/py/aprsd"><img
+            src="https://img.shields.io/badge/APRSD-Version%20{{ aprsd_version }}-brightgreen"
+            alt="APRSD version" height="18"></a>
+    <a href="https://github.com/craigerl/aprsd"><img
+            src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg"
+            height="18"></a>
+</div>
+</body>
+</html>

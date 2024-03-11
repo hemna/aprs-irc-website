@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>APRS IRC Service</title>
+    <meta name="lang" content="en" />
+    <meta charset="utf-8" />
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet"
+          href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.socket.io/4.1.2/socket.io.min.js"
+            integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg"
+            crossorigin="anonymous"></script>
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+          crossorigin="anonymous">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+            crossorigin="anonymous"></script>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/jquery-date.js"></script>
+
+
+    <style>
+        body,html {
+            background: #eeeeee;
+            /*margin: 1em;*/
+            text-align: center;
+            font-family: system-ui, sans-serif;
+            height: 100%;
+        }
+    </style>
+    <script type="text/javascript">
+            var initial_stats = {{ initial_stats|tojson|safe }};
+            var channels = {{ channels|tojson|safe }};
+            console.log(channels);
+            $(document).ready(function() {
+                init_tabs();
+            });
+    </script>
+</head>
+<body>
+    <div class="wc-container">
+        <div class="wc-row header">
+            <div class="container-sm">
+                <div class="row">
+                    <div class="column">
+                        <h1>APRS IRC</h1>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column">
+                        <span style='color: green'>{{ callsign }}</span>
+                        connected to
+                        <span style='color: blue' id='aprs_connection'>{{ aprs_connection|safe }}</span>
+                        <span id='uptime'>NONE</span>
+                    </div>
+                </div>
+            </div>
+            <div class="container-md" style="max-width:800px;">
+                <ul class="nav nav-tabs" id="msgsTabList" role="tablist"></ul>
+            </div>
+        </div>
+        <div class="wc-row content" id="wc-content" style="height:100%">
+            <div class="container-md" style="max-width: 800px;">
+                <div class="tab-content" id="msgsTabContent">
+                </div>
+            </div>
+        </div>
+        <div class="wc-row footer">
+            <div class="container-sm" style="padding-top: 40px">
+                <a href="https://badge.fury.io/py/aprsd"><img src="https://badge.fury.io/py/aprsd.svg" alt="PyPI version" height="18"></a>
+                <a href="https://github.com/craigerl/aprsd"><img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" height="18"></a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

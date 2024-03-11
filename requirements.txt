@@ -1,0 +1,18 @@
+aprsd>=3.0.0
+git+https://github.com/craigerl/aprsd.git#egg=aprsd
+-e git+https://github.com/hemna/aprsd-irc-extension.git@db#egg=aprsd_irc_extension
+geojson
+requests
+rich
+simple-websocket
+oslo.config
+oslo.log
+click
+click-completion
+cachetools
+pyproj
+uvicorn[standard]==0.20.0
+gunicorn==20.1.0
+#fastapi[all]==0.88.0
+fastapi[all]==0.109.2
+jinja2

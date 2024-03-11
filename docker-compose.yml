@@ -1,0 +1,9 @@
+version: '3'
+services:
+  web:
+    build: ./
+
+networks:
+  default:
+    name: aprsd
+    external: true
