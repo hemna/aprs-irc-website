@@ -136,7 +136,7 @@ function build_message(message) {
     html += '<div class="col-2" style="font-size:.9em;color:white;max-width:120px;border-left:1px solid #999999;">';
     html += message["from_call"];
     html += '</div>';
-    html += '<div class="col-7" style="font-size: 0.8em;border-left: 1px solid #999999;">';
+    html += '<div class="col-8" style="text-align:left;font-size: 0.8em;border-left: 1px solid #999999;">';
     html += message["message_text"];
     html += '</div>';
     html += '</div>';
