@@ -72,7 +72,7 @@ function create_channel_tab(channel_obj, active=false) {
 
   item_html = '<li class="nav-item" role="presentation" channel="'+channel+'" id="'+tab_id_li+'">';
   item_html += '<button onClick="channel_select(\''+channel+'\');" channel="'+channel+'" class="nav-link position-relative '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+channel+'" aria-selected="true">';
-  item_html += channel+'&nbsp;&nbsp;';
+  item_html += '#'+channel+'&nbsp;&nbsp;';
   item_html += '</button></li>'
 
   channelTabs.append(item_html);
@@ -98,11 +98,12 @@ function create_channel_tab_content(channel_obj, active=false) {
   item_html = '<div style="height: 100%" class="tab-pane fade '+active_str+'" id="'+tab_content+'" role="tabpanel" aria-labelledby="'+tab_id+'">';
   item_html += '<div class="container text-center" style="border: 1px solid #999999;background-color:#aaaa;">';
   item_html += '  <div class="row align-items-start">';
-  item_html += '    <div class="col-9" id="'+channel_messages+'" style="border-right: 1px solid #999999;">';
+  item_html += '    <div class="col-10" id="'+channel_messages+'" style="border-right: 1px solid #999999;">';
   item_html += '        '+ch_messages;
   item_html += '    </div>';
-  item_html += '    <div class="col-2 " id="'+channel_users+'">';
-  item_html += '        '+ch_users;
+  item_html += '    <div class="col-2" id="'+channel_users+'">';
+  item_html += '        <div class="row align-items-start"><div class="col-12" style="font-weight:bold;font-size:1.2em;">Active Users</div></div>';
+  item_html += '        <div class="row align-items-start"><div class="col-12" style="font-weight:bold;color:#555555;">'+ch_users+'</div></div>';
   item_html += '    </div>';
   item_html += '  </div>';
   item_html += '</div>';
@@ -128,14 +129,14 @@ function build_message(message) {
     dt = new Date(message["timestamp"] * 1000);
     dt_str = $.format.date(dt, 'yyyy/MM/dd HH:mm:ss');
 
-    var html = '<div class="row">';
-    html += '<div class="col-3" style="font-size:.8em;color:green;">';
+    var html = '<div class="row" style="border-top: 1px solid #999999;">';
+    html += '<div class="col-2" style="font-size:.8em;color:green;max-width:160px;">';
     html += dt_str;
     html += '</div>';
-    html += '<div class="col-3" style="font-size:.9em;color:white;">';
+    html += '<div class="col-2" style="font-size:.9em;color:white;max-width:120px;border-left:1px solid #999999;">';
     html += message["from_call"];
     html += '</div>';
-    html += '<div class="col-5">';
+    html += '<div class="col-7" style="font-size: 0.8em;border-left: 1px solid #999999;">';
     html += message["message_text"];
     html += '</div>';
     html += '</div>';
@@ -166,11 +167,13 @@ function build_user(user) {
 function init_tabs() {
     console.log("init_tabs");
     // Create the tabs for each channels
+    first = true;
     console.log(channels);
     for (index in channels) {
        channel = channels[index];
        console.log(channel);
-       create_channel_tab(channel);
+       create_channel_tab(channel, active=first);
+       first = false;
     }
 }
 

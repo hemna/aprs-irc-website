@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="30">
     <title>APRS IRC Service</title>
     <meta name="lang" content="en" />
     <meta charset="utf-8" />
@@ -37,7 +38,6 @@
         }
     </style>
     <script type="text/javascript">
-            var initial_stats = {{ initial_stats|tojson|safe }};
             var channels = {{ channels|tojson|safe }};
             console.log(channels);
             $(document).ready(function() {
@@ -54,21 +54,20 @@
                         <h1>APRS IRC</h1>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row" style="margin-top:50px; margin-bottom:50px;">
                     <div class="column">
-                        <span style='color: green'>{{ callsign }}</span>
-                        connected to
-                        <span style='color: blue' id='aprs_connection'>{{ aprs_connection|safe }}</span>
-                        <span id='uptime'>NONE</span>
+                        <span >
+                            This site is an up to date archive of the Ham radio APRS 'IRC' Service.  Each Tab is a channel and the individual messages sent on the channel by each HAM radio operator.
+                        </span>
                     </div>
                 </div>
             </div>
-            <div class="container-md" style="max-width:800px;">
+            <div class="container-md">
                 <ul class="nav nav-tabs" id="msgsTabList" role="tablist"></ul>
             </div>
         </div>
         <div class="wc-row content" id="wc-content" style="height:100%">
-            <div class="container-md" style="max-width: 800px;">
+            <div class="container-md">
                 <div class="tab-content" id="msgsTabContent">
                 </div>
             </div>
