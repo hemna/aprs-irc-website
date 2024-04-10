@@ -189,14 +189,11 @@ def create_app () -> FastAPI:
         channels_json = []
         for ch in channels:
             ch_json = ch.to_json()
-            LOG.info(ch_json)
             ch_json["messages"] = []
-            if len(ch.messages):
-                for m in ch.messages:
-                    pkt_json = json.loads(m.packet.json)
-                    ch_json["messages"].append(pkt_json)
-                    LOG.warning(pkt_json)
-                    LOG.error(type(pkt_json))
+            for m in ch.messages.limit(50):
+                pkt_json = json.loads(m.packet.json)
+                ch_json["messages"].append(pkt_json)
+            ch_json["messages"].reverse()
             channels_json.append(ch_json)
         LOG.debug(channels_json)
 
@@ -216,7 +213,6 @@ def create_app () -> FastAPI:
     @app.get("/stats")
     async def stats():
         return fetch_stats()
-
     return app
 
     @app.get("/messages/{channel}")
@@ -224,9 +220,11 @@ def create_app () -> FastAPI:
         ch = models.Channel.get_channel_by_name(channel)
         messages = []
         if ch:
-            if len(ch.messages):
-                for m in ch.messages:
+            if ch.messages:
+                for m in ch.messages.limit(50):
                     messages.append(m.to_json())
+                messages.reverse()
+
         return messages
 
 
