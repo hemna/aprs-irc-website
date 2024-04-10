@@ -122,6 +122,17 @@ function build_channel_messages(channel_obj) {
     return messages_html;
 }
 
+function rgb_from_string(name) {
+    hash = 0
+    for (let i = 0; i < name.length; i++) {
+        hash = ord(name[i]) + ((hash << 5) - hash)
+    }
+    red = hash & 255
+    green = (hash >> 8) & 255
+    blue = (hash >> 16) & 255
+    return "#"+red+green+blue
+}
+
 function build_message(message) {
     ts = message["timestamp"];
     console.log(ts);
@@ -129,11 +140,14 @@ function build_message(message) {
     dt = new Date(message["timestamp"] * 1000);
     dt_str = $.format.date(dt, 'yyyy/MM/dd HH:mm:ss');
 
+    callsign_color = rgb_from_string(message["from_call"]);
+    console.log("callsign_color: " + callsign_color);
+
     var html = '<div class="row" style="border-top: 1px solid #999999;">';
     html += '<div class="col-2" style="font-size:.8em;color:green;max-width:160px;">';
     html += dt_str;
     html += '</div>';
-    html += '<div class="col-2" style="font-size:.9em;color:white;max-width:120px;border-left:1px solid #999999;">';
+    html += '<div class="col-2" style="font-size:.9em;color:'+callsign_color+';max-width:120px;border-left:1px solid #999999;">';
     html += message["from_call"];
     html += '</div>';
     html += '<div class="col-8" style="text-align:left;font-size: 0.8em;border-left: 1px solid #999999;">';
