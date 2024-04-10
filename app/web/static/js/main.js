@@ -130,7 +130,7 @@ function rgb_from_string(name) {
     red = hash & 255
     green = (hash >> 8) & 255
     blue = (hash >> 16) & 255
-    return "#"+red+green+blue
+    return "rgb("+red+","+green+","+blue+")";
 }
 
 function build_message(message) {
@@ -140,8 +140,9 @@ function build_message(message) {
     dt = new Date(message["timestamp"] * 1000);
     dt_str = $.format.date(dt, 'yyyy/MM/dd HH:mm:ss');
 
-    callsign_color = rgb_from_string(message["from_call"]);
-    console.log("callsign_color: " + callsign_color);
+    callsign = message["from_call"]
+    callsign_color = rgb_from_string(callsign);
+    console.log("callsign_color("+callsign+"): " + callsign_color);
 
     var html = '<div class="row" style="border-top: 1px solid #999999;">';
     html += '<div class="col-2" style="font-size:.8em;color:green;max-width:160px;">';
