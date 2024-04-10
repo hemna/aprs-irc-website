@@ -10,10 +10,10 @@ from aprslib import parse as aprs_parse
 from cachetools import cached, TTLCache
 from geojson import Feature, Point
 from oslo_config import cfg
-from aprsd.rpc import client as aprsd_rpc_client
 from aprsd_irc_extension import conf
 from aprsd_irc_extension.db import session as db_session
 from aprsd_irc_extension.db import models
+from aprsd.threads import stats as stats_threads
 
 
 from fastapi import FastAPI, Request, Response
@@ -56,7 +56,6 @@ web_opts = [
 
 LOG = None
 CONF.register_opts(web_opts, group="web")
-CONF.register_opts(aprsd.conf.common.rpc_opts, group="rpc_settings")
 API_KEY_HEADER = "X-Api-Key"
 app = FastAPI(
     static_url_path="/static",
@@ -66,92 +65,15 @@ app = FastAPI(
 
 
 def fetch_stats():
-    stats = None
-    try:
-        stats = aprsd_rpc_client.RPCClient().get_stats_dict()
-    except Exception as ex:
-        LOG.error(ex)
-
-    if not stats:
-        stats = {
-            "aprsd": {
-                "seen_list": [],
-                "version": "unknown",
-            },
-            "aprs-is": {"server": ""},
-            "messages": {
-                "sent": 0,
-                "received": 0,
-            },
-            "email": {
-                "sent": 0,
-                "received": 0,
-            },
-            "seen_list": {
-                "sent": 0,
-                "received": 0,
-            },
-            "repeat": {
-                "version": "unknown",
-            }
-        }
-    #LOG.debug(f"stats {stats}")
-    stats['repeat'] = {'version': 'unknown'}
-    if "aprsd" in stats:
-        if "watch_list" in stats["aprsd"]:
-            del stats["aprsd"]["watch_list"]
-    if "email" in stats:
-        del stats["email"]
-    if "messages" in stats:
-        del stats["messages"]
-    if 'repeat' not in stats:
-        stats['repeat'] = {'version':'dev'}
-
-    if "aprsd" in stats:
-        if "seen_list" in stats["aprsd"] and "REPEAT" in stats["aprsd"]["seen_list"]:
-            del stats["aprsd"]["seen_list"]["REPEAT"]
-
-        seen_list = stats["aprsd"]["seen_list"]
-        for call in seen_list:
-            # add a ts 2021-11-01 16:18:11.631723
-            date = datetime.datetime.strptime(seen_list[call]['last'], "%Y-%m-%d %H:%M:%S.%f")
-            seen_list[call]["ts"] = int(datetime.datetime.timestamp(date))
+    stats_obj = stats_threads.StatsStore()
+    stats_obj.load()
+    now = datetime.datetime.now()
+    time_format = "%m-%d-%Y %H:%M:%S"
+    stats = {
+        "time": now.strftime(time_format),
+        "stats": stats_obj.data,
+    }
     return stats
-
-
-@cached(cache=TTLCache(maxsize=40960, ttl=6), info=True)
-def _get_wx_stations():
-    url = f"http://{CONF.web.haminfo_ip}:{CONF.web.haminfo_port}/wxstations"
-    LOG.debug(f"Fetching {url}")
-    stations = []
-    try:
-        headers = {API_KEY_HEADER: CONF.web.api_key}
-        LOG.debug(f"headers {headers}")
-        response = requests.get(url=url,
-                                headers=headers,
-                                timeout=60)
-        if response.status_code == 200:
-            json_record = response.json()
-
-            for entry in json_record:
-                #LOG.info(entry)
-                point = Point((entry['longitude'], entry['latitude']))
-                marker = Feature(geometry=point,
-                                 id=entry['id'],
-                                 properties=entry
-                                 )
-                stations.append(marker)
-                # self.cs.print(entry)
-        else:
-            LOG.error(response)
-            return None
-
-    except Exception as ex:
-        LOG.error(ex)
-        return None
-
-    LOG.warning(f"Size {len(stations)}")
-    return stations
 
 
 def create_app () -> FastAPI:
