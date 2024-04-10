@@ -100,12 +100,12 @@ def create_app () -> FastAPI:
         LOG.debug(aprsd_stats)
         aprs_connection = (
             "APRS-IS Server: <a href='http://status.aprs2.net' >"
-            "{}</a>".format(aprsd_stats["aprs-is"]["server"])
+            "{}</a>".format(aprsd_stats["stats"]["APRSClientStats"]["server_string"])
         )
 
-        version = aprsd_stats["repeat"]["version"]
-        aprsd_version = aprsd_stats["aprsd"]["version"]
-        uptime = aprsd_stats["aprsd"].get("uptime")
+        version = aprsd_stats["stats"]["APRSDStats"]["version"]
+        aprsd_version = aprsd_stats["stats"]["APRSDStats"]["version"]
+        uptime = aprsd_stats["stats"]["APRSDStats"].get("uptime")
 
         channels = models.Channel.get_all_channels()
         channels_json = []
