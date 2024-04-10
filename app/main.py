@@ -113,7 +113,7 @@ def create_app () -> FastAPI:
             ch_json = ch.to_json()
             ch_json["messages"] = []
             for m in ch.messages.limit(50):
-                pkt_json = json.loads(m.packet.json)
+                pkt_json = json.loads(m.packet.to_json())
                 ch_json["messages"].append(pkt_json)
             ch_json["messages"].reverse()
             channels_json.append(ch_json)
