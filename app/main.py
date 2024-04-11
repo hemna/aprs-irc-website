@@ -97,7 +97,6 @@ def create_app () -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
         aprsd_stats = fetch_stats()
-        LOG.debug(aprsd_stats)
         aprs_connection = (
             "APRS-IS Server: <a href='http://status.aprs2.net' >"
             "{}</a>".format(aprsd_stats["stats"]["APRSClientStats"]["server_string"])
