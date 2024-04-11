@@ -116,7 +116,6 @@ def create_app () -> FastAPI:
                 pkt_json = json.loads(m.packet.to_json())
                 ch_json["messages"].append(pkt_json)
             channels_json.append(ch_json)
-        LOG.debug(channels_json)
 
         return templates.TemplateResponse(
             request=request, name="index.html",
