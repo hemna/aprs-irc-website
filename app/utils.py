@@ -1,8 +1,9 @@
+import colorsys
 from pathlib import Path
 
 home = str(Path.home())
-DEFAULT_CONFIG_DIR = "{}/.config/aprsd_repeat/".format(home)
-DEFAULT_CONFIG_FILE = "{}/.config/aprsd_repeat/aprsd_repeat.conf".format(home)
+DEFAULT_CONFIG_DIR  = "{}/.config/aprsd_irc/".format(home)
+DEFAULT_CONFIG_FILE = "{}/.config/aprsd_irc/aprsd_irc.conf".format(home)
 
 
 def hsl_to_rgb(hsl):

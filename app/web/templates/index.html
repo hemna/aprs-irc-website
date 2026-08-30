@@ -1,106 +1,91 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="refresh" content="30">
-    <title>APRS IRC Service</title>
-    <meta name="lang" content="en" />
     <meta charset="utf-8" />
+    <title>APRS IRC Service</title>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <link rel="stylesheet"
-          href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-    <script src="https://cdn.socket.io/4.1.2/socket.io.min.js"
-            integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg"
-            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/static/css/irc.css">
 
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
-          crossorigin="anonymous">
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-            crossorigin="anonymous"></script>
-
-    <script src="/static/js/main.js"></script>
-    <script src="/static/js/jquery-date.js"></script>
-
-
-    <style>
-        body,html {
-            background: #eeeeee;
-            /*margin: 1em;*/
-            text-align: center;
-            font-family: system-ui, sans-serif;
-            height: 100%;
-        }
-    </style>
-    <script type="text/javascript">
-            var channels = {{ channels|tojson|safe }};
-            console.log(channels);
-            $(document).ready(function() {
-                init_tabs();
-            });
+    <script>
+        // Channel data injected at render time — no console.log in production
+        var channels = {{ channels|tojson|safe }};
     </script>
 </head>
 <body>
-    <div class="wc-container">
-        <div class="wc-row header">
-            <div class="container-sm">
-                <div class="row">
-                    <div class="column">
-                        <h1>APRS IRC</h1>
-                    </div>
-                </div>
-                <div class="row" style="margin-top:50px; margin-bottom:50px;">
-                    <div class="column">
-                        <span >
-                            This site is an up to date archive of the Ham radio APRS 'IRC' Service.  Each Tab is a channel and the individual messages sent on the channel by each HAM radio operator.
-                        </span>
-                        <br><br>
-                        <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseCommands" role="button" aria-expanded="false" aria-controls="collapseExample">
-                            Click me to learn how to use the APRS IRC service
-                        </a>
-                        <div class="collapse" id="collapseCommands">
-                        <dl>
-                            <dt>Send all the following commands and messages to "IRC" callsign</dt>
-                            <dt>How to: list all existing channels</dt>
-                            <dd>/list</dd>
-                            <dt>How to: join a channel to talk</dt>
-                            <dd>/join #lounge</dd>
-                            <dt>How to: Send a message to the #lounge channel.  The only channel you are in.</dt>
-                            <dd>hello message text to your only channel</dd>
-                            <dt>How to: Join a 2nd channel</dt>
-                            <dd>/join #otherchannel</dd>
-                            <dt>How to: send a message to a specific channel</dt>
-                            <dd>#otherchannel message text to other channel</dd>
-                            <dd>#lounge message to lounge again</dd>
-                            <dt>How to: Leave a channel</dt>
-                            <dd>/leave #lounge</dd>
-                            <dd>/leave #otherchannel</dd>
-                        </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="container-md">
-                <ul class="nav nav-tabs" id="msgsTabList" role="tablist"></ul>
-            </div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header class="site-header">
+    <div class="header-inner">
+        <div class="header-left">
+            <span class="site-title">&#9654; APRS IRC</span>
+            <span class="header-meta" id="aprs_connection">{{ aprs_connection|safe }}</span>
         </div>
-        <div class="wc-row content" id="wc-content" style="height:100%">
-            <div class="container-md">
-                <div class="tab-content" id="msgsTabContent">
-                </div>
-            </div>
-        </div>
-        <div class="wc-row footer">
-            <div class="container-sm" style="padding-top: 40px">
-                <a href="https://badge.fury.io/py/aprsd"><img src="https://badge.fury.io/py/aprsd.svg" alt="PyPI version" height="18"></a>
-                <a href="https://github.com/craigerl/aprsd"><img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" height="18"></a>
-            </div>
+        <div class="header-right">
+            <span class="stat-chip" id="version" title="aprsd version">v{{ version }}</span>
+            <span class="stat-chip" id="uptime" title="uptime">{{ uptime or '—' }}</span>
+            <span class="callsign-badge">{{ callsign }}</span>
         </div>
     </div>
+</header>
+
+<!-- ── Main layout ────────────────────────────────────────────────────── -->
+<div class="layout">
+
+    <!-- Sidebar: channel list + help -->
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-heading">CHANNELS</div>
+            <ul class="channel-list" id="channelList"></ul>
+        </div>
+
+        <div class="sidebar-section">
+            <button class="help-toggle" id="helpToggle" aria-expanded="false">
+                <span class="help-icon">?</span> How to use IRC
+            </button>
+            <div class="help-panel" id="helpPanel" hidden>
+                <p class="help-intro">Send commands to callsign <strong>IRC</strong> via APRS message:</p>
+                <dl class="cmd-list">
+                    <dt>/list</dt>
+                    <dd>List all active channels</dd>
+                    <dt>/join #lounge</dt>
+                    <dd>Join the #lounge channel</dd>
+                    <dt>hello world</dt>
+                    <dd>Send a message to your only joined channel</dd>
+                    <dt>#lounge hello</dt>
+                    <dd>Send to a specific channel when in multiple</dd>
+                    <dt>/join #other</dt>
+                    <dd>Join a second channel</dd>
+                    <dt>/leave #lounge</dt>
+                    <dd>Leave a channel</dd>
+                </dl>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main content: channel messages -->
+    <main class="content" id="mainContent">
+        <div class="channel-pane-container" id="channelPanes">
+            <!-- Populated by JS -->
+        </div>
+    </main>
+
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer class="site-footer">
+    <span>
+        <a href="https://badge.fury.io/py/aprsd" target="_blank" rel="noopener">
+            <img src="https://badge.fury.io/py/aprsd.svg" alt="PyPI version" height="16">
+        </a>
+        &nbsp;
+        <a href="https://github.com/craigerl/aprsd" target="_blank" rel="noopener">
+            <img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" height="16">
+        </a>
+    </span>
+    <span class="footer-note">Archive updates every 60 seconds &bull; WB4BOR</span>
+</footer>
+
+<script src="/static/js/irc.js"></script>
 </body>
 </html>

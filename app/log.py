@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 import utils
 
 CONF = cfg.CONF
-LOG_DOMAIN = "REPEAT_WEB"
+LOG_DOMAIN = "IRC_WEB"
 LOG = None
 FormatTimeCallable = Callable[[datetime], Text]
 
@@ -174,7 +174,7 @@ class APRSDRichHandler(RichHandler):
         return log_renderable
 
 
-def setup_logging(flask_app, gunicorn=False):
+def setup_logging(app, gunicorn=False):
     global LOG
     """Prepare Oslo Logging (2 or 3 steps)
 

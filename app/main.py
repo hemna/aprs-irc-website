@@ -3,20 +3,14 @@ import click
 import datetime
 import json
 import logging as python_logging
-import requests
 import sys
 
-from aprslib import parse as aprs_parse
-from cachetools import cached, TTLCache
-from geojson import Feature, Point
 from oslo_config import cfg
 from aprsd_irc_extension import conf
-from aprsd_irc_extension.db import session as db_session
 from aprsd_irc_extension.db import models
 from aprsd.threads import stats as stats_threads
 
-
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -149,16 +143,20 @@ def create_app () -> FastAPI:
     async def stats():
         return fetch_stats()
 
+    @app.get("/health")
+    async def health():
+        return JSONResponse({"status": "ok"})
+
     @app.get("/messages/{channel}")
     async def messages(channel: str):
-        ch = models.Channel.get_channel_by_name(channel)
-        messages = []
-        if ch:
-            if ch.messages:
-                for m in ch.messages.limit(50):
-                    messages.append(m.to_json())
-
-        return messages
+        # Channel names may be stored with a leading # — match both forms
+        ch = models.Channel.get_channel_by_name(channel) or \
+             models.Channel.get_channel_by_name('#' + channel)
+        result = []
+        if ch and ch.messages:
+            for m in ch.messages.limit(50):
+                result.append(m.to_json())
+        return result
 
     return app
 
