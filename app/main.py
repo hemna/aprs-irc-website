@@ -51,7 +51,6 @@ web_opts = [
 LOG = None
 CONF.register_opts(web_opts, group="web")
 API_KEY_HEADER = "X-Api-Key"
-app = FastAPI()
 
 
 def fetch_stats():
@@ -91,7 +90,7 @@ def fetch_stats():
 
 
 def create_app(config_file: str = None) -> FastAPI:
-    global app, LOG
+    global LOG
 
     # Config resolution order (closes #3):
     #   1. explicit argument
