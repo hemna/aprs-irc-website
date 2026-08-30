@@ -80,9 +80,9 @@ _stub_module("uvicorn")
 # click stub — needs .command(), .option(), etc.
 _click = types.ModuleType("click")
 _click.command = lambda *a, **kw: (lambda f: f)
-_click.option  = lambda *a, **kw: (lambda f: f)
+_click.option = lambda *a, **kw: (lambda f: f)
 _click.version_option = lambda *a, **kw: (lambda f: f)
-_click.Choice  = lambda *a, **kw: None
+_click.Choice = lambda *a, **kw: None
 sys.modules.setdefault("click", _click)
 
 # log stub
