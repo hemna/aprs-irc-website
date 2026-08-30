@@ -4,8 +4,11 @@ import datetime
 import json
 import logging as python_logging
 import os
+import secrets
 import uvicorn
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from oslo_config import cfg
 from aprsd_irc_extension.db import models
 from aprsd.threads import stats as stats_threads
@@ -45,6 +48,11 @@ web_opts = [
     cfg.StrOpt('aprsd_port',
                default='8043',
                help='The APRSD api IP port'
+               ),
+    cfg.StrOpt('admin_password',
+               default=None,
+               help='Password for the /admin interface. If unset, admin routes return 503.',
+               secret=True,
                ),
 ]
 
@@ -118,6 +126,23 @@ def create_app(config_file: str = None) -> FastAPI:
         name="static",
     )
     templates = Jinja2Templates(directory=os.path.join(_app_dir, "web", "templates"))
+
+    security = HTTPBasic()
+
+    def require_admin(credentials: HTTPBasicCredentials = Depends(security)):
+        password = CONF.web.admin_password
+        if not password:
+            raise HTTPException(status_code=503, detail="Admin interface not configured")
+        ok = secrets.compare_digest(
+            credentials.password.encode("utf-8"),
+            password.encode("utf-8"),
+        )
+        if not ok:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password",
+                headers={"WWW-Authenticate": "Basic"},
+            )
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
@@ -243,6 +268,63 @@ def create_app(config_file: str = None) -> FastAPI:
                 "Cache-Control": "no-cache",
                 "X-Accel-Buffering": "no",  # disable nginx buffering
             },
+        )
+
+    @app.get("/admin", response_class=HTMLResponse)
+    async def admin(request: Request, _=Depends(require_admin)):
+        channels = models.Channel.get_all_channels()
+        return templates.TemplateResponse(
+            request=request, name="admin.html",
+            context={"channels": channels},
+        )
+
+    @app.post("/admin/channel/{channel_name}/delete", response_class=HTMLResponse)
+    async def admin_delete_channel(
+        request: Request,
+        channel_name: str,
+        _=Depends(require_admin),
+    ):
+        from aprsd_irc_extension.db import session as db_session
+        session = db_session.get_session()
+        ch = (models.Channel.find_by_name(session, channel_name) or
+              models.Channel.find_by_name(session, '#' + channel_name))
+        message = f"Channel {channel_name} not found."
+        if ch:
+            session.delete(ch)
+            session.commit()
+            message = f"Channel {ch.name} deleted."
+        channels = models.Channel.get_all_channels()
+        return templates.TemplateResponse(
+            request=request, name="admin.html",
+            context={"channels": channels, "message": message},
+        )
+
+    @app.post("/admin/channel/{channel_name}/user/{callsign}/delete", response_class=HTMLResponse)
+    async def admin_delete_user(
+        request: Request,
+        channel_name: str,
+        callsign: str,
+        _=Depends(require_admin),
+    ):
+        from aprsd_irc_extension.db import session as db_session
+        from aprsd_irc_extension.db.models import ChannelUsers
+        session = db_session.get_session()
+        ch = (models.Channel.find_by_name(session, channel_name) or
+              models.Channel.find_by_name(session, '#' + channel_name))
+        message = f"User {callsign} or channel {channel_name} not found."
+        if ch:
+            user_obj = session.query(ChannelUsers).filter(
+                ChannelUsers.channel_id == ch.id,
+                ChannelUsers.user == callsign,
+            ).first()
+            if user_obj:
+                session.delete(user_obj)
+                session.commit()
+                message = f"Removed {callsign} from {ch.name}."
+        channels = models.Channel.get_all_channels()
+        return templates.TemplateResponse(
+            request=request, name="admin.html",
+            context={"channels": channels, "message": message},
         )
 
     return app
