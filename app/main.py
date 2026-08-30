@@ -3,6 +3,7 @@ import datetime
 import json
 import logging as python_logging
 import os
+import uvicorn
 
 from oslo_config import cfg
 from aprsd_irc_extension.db import models
@@ -55,6 +56,7 @@ app = FastAPI()
 def fetch_stats():
     now = datetime.datetime.now()
     time_format = "%m-%d-%Y %H:%M:%S"
+    _log = LOG or python_logging.getLogger(__name__)
 
     # Prefer the JSON stats file (written by aprsd; more reliable than pickle).
     # Check both the shared /config mount and the local config/ directory.
@@ -67,24 +69,36 @@ def fetch_stats():
                     "time": now.strftime(time_format),
                     "stats": data,
                 }
-            except Exception:
-                pass
+            except Exception as exc:
+                # Log and continue — try the next candidate path (closes #7).
+                _log.warning("Failed to read stats from %s: %s", stats_json_path, exc)
 
     # Fall back to the StatsStore pickle
-    stats_obj = stats_threads.StatsStore()
-    stats_obj.load()
-    return {
-        "time": now.strftime(time_format),
-        "stats": stats_obj.data,
-    }
+    try:
+        stats_obj = stats_threads.StatsStore()
+        stats_obj.load()
+        return {
+            "time": now.strftime(time_format),
+            "stats": stats_obj.data,
+        }
+    except Exception as exc:
+        _log.error("fetch_stats: all sources failed — returning empty stats. Cause: %s", exc)
+        return {
+            "time": now.strftime(time_format),
+            "stats": {},
+        }
 
 
 def create_app(config_file: str = None) -> FastAPI:
     global app, LOG
 
-    conf_file = config_file or os.environ.get(
-        "APRS_IRC_TEST_CONFIG", "config/aprsd_irc.conf"
-    )
+    # Config resolution order (closes #3):
+    #   1. explicit argument
+    #   2. APRS_IRC_TEST_CONFIG env var (used by tests)
+    #   3. <app-dir>/config/aprsd_irc.conf  (path relative to *this file*, not CWD)
+    _app_dir = os.path.dirname(os.path.abspath(__file__))
+    _default_conf = os.path.join(_app_dir, "config", "aprsd_irc.conf")
+    conf_file = config_file or os.environ.get("APRS_IRC_TEST_CONFIG") or _default_conf
     _config_args = ["--config-file", conf_file]
 
     CONF(_config_args, project='aprsd_irc', version="1.0.0")
@@ -93,8 +107,12 @@ def create_app(config_file: str = None) -> FastAPI:
     LOG = log.setup_logging(app, gunicorn=True)
     CONF.log_opt_values(LOG, python_logging.DEBUG)
 
-    app.mount("/static", StaticFiles(directory="web/static"), name="static")
-    templates = Jinja2Templates(directory="web/templates")
+    app.mount(
+        "/static",
+        StaticFiles(directory=os.path.join(_app_dir, "web", "static")),
+        name="static",
+    )
+    templates = Jinja2Templates(directory=os.path.join(_app_dir, "web", "templates"))
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
@@ -143,6 +161,17 @@ def create_app(config_file: str = None) -> FastAPI:
     async def health():
         return JSONResponse({"status": "ok"})
 
+    @app.get("/about", response_class=HTMLResponse)
+    async def about(request: Request):
+        aprsd_stats = fetch_stats()
+        stats_data = aprsd_stats.get("stats", {})
+        aprsd_stats_data = stats_data.get("APRSDStats", {})
+        version = aprsd_stats_data.get("version", "unknown")
+        return templates.TemplateResponse(
+            request=request, name="about.html",
+            context={"aprsd_version": version},
+        )
+
     @app.get("/messages/{channel}")
     async def messages(channel: str):
         # Channel names may be stored with a leading # — match both forms
@@ -180,7 +209,13 @@ def create_app(config_file: str = None) -> FastAPI:
 )
 @click.version_option()
 def main(config_file, log_level):
-    global app
-
-    app = create_app(config_file=config_file)
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    # Closes #4: FastAPI apps don't have .run(); use uvicorn directly.
+    create_app(config_file=config_file)
+    uvicorn.run(
+        "main:create_app",
+        factory=True,
+        host="0.0.0.0",
+        port=8080,
+        log_level=log_level.lower(),
+        reload=False,
+    )
