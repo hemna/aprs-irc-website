@@ -1,0 +1,110 @@
+---
+# Forgejo Actions — PR checks
+# Runs on every push and pull-request targeting master.
+# Three jobs: lint (Python) → test (Python) → js-check (Node syntax)
+#
+# Runner environment: docker image node:20-bookworm
+#   - Node 20 available natively
+#   - Python 3.11.2 available natively
+#   - No pip by default; we install uv for fast dependency management
+#   - actions/setup-python is NOT used (tool-cache unavailable on this runner)
+
+name: PR Checks
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Python linting (ruff + flake8)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Python Lint
+    runs-on: docker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Create venv and install dev deps
+        run: |
+          uv venv /tmp/venv
+          . /tmp/venv/bin/activate
+          # Install only the linting tools — skip heavy runtime deps
+          uv pip install ruff flake8
+
+      - name: ruff check
+        run: |
+          . /tmp/venv/bin/activate
+          ruff check app/ tests/
+
+      - name: flake8 check
+        run: |
+          . /tmp/venv/bin/activate
+          flake8 app/ tests/ --max-line-length=100 --exclude=__pycache__,.venv
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Python unit tests
+  # ---------------------------------------------------------------------------
+  test:
+    name: Python Tests
+    runs-on: docker
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Create venv and install test deps
+        run: |
+          uv venv /tmp/venv
+          # Install only packages available on PyPI (no VCS deps from requirements.txt)
+          . /tmp/venv/bin/activate
+          uv pip install \
+            pytest \
+            pytest-asyncio \
+            httpx \
+            fastapi \
+            "uvicorn[standard]" \
+            jinja2 \
+            click \
+            cachetools \
+            requests \
+            rich
+
+      - name: Run tests
+        run: |
+          . /tmp/venv/bin/activate
+          pytest tests/ -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # Job 3: JavaScript syntax check
+  # ---------------------------------------------------------------------------
+  js-check:
+    name: JS Syntax Check
+    runs-on: docker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JS syntax (node --check)
+        run: |
+          # node:20-bookworm has Node 20 available — no install needed
+          for f in app/web/static/js/*.js; do
+            echo "Checking $f"
+            node --check "$f"
+          done
+          echo "All JS files passed syntax check."

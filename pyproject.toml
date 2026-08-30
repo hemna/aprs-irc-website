@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "aprs-irc-website"
+version = "1.0.0"
+description = "APRS IRC bridge web dashboard"
+requires-python = ">=3.10"
+dependencies = [
+    "aprsd>=3.0.0",
+    "aprsd-irc-extension",
+    "geojson",
+    "requests",
+    "rich",
+    "oslo.config",
+    "oslo.log",
+    "click",
+    "click-completion",
+    "cachetools",
+    "pyproj",
+    "uvicorn[standard]==0.20.0",
+    "gunicorn==20.1.0",
+    "fastapi[all]==0.109.2",
+    "jinja2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.26",          # ASGI test client for FastAPI
+    "ruff>=0.3",
+    "flake8>=7.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]          # line length handled by flake8 max-line-length
+
+[tool.flake8]
+max-line-length = 100
+exclude = [".git", "__pycache__", ".venv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
