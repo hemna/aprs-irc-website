@@ -55,11 +55,12 @@ function channelId(name) {
     return 'ch_' + name.replace(/^#/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
-function paneEl(name)      { return document.getElementById(channelId(name)); }
-function feedEl(name)      { return document.getElementById(channelId(name) + '_feed'); }
-function usersEl(name)     { return document.getElementById(channelId(name) + '_users'); }
-function channelBtnEl(name){ return document.getElementById(channelId(name) + '_btn'); }
-function unreadDotEl(name) { return document.getElementById(channelId(name) + '_dot'); }
+function paneEl(name)       { return document.getElementById(channelId(name)); }
+function feedEl(name)       { return document.getElementById(channelId(name) + '_feed'); }
+function usersEl(name)      { return document.getElementById(channelId(name) + '_users'); }
+function channelBtnEl(name) { return document.getElementById(channelId(name) + '_btn'); }
+function unreadDotEl(name)  { return document.getElementById(channelId(name) + '_dot'); }
+function msgCountEl(name)   { return document.getElementById(channelId(name) + '_msgcount'); }
 
 // ── Channel list (sidebar) ────────────────────────────────────────────────────
 
@@ -79,14 +80,24 @@ function renderChannelList(channelData) {
         hash.textContent = '#';
 
         const label = document.createElement('span');
+        label.className = 'ch-label';
         label.textContent = ch.name.replace(/^#/, '');
+
+        const userCount = document.createElement('span');
+        userCount.className = 'ch-users';
+        userCount.textContent = (ch.users || []).length + 'u';
+
+        const msgCount = document.createElement('span');
+        msgCount.className = 'ch-msgs';
+        msgCount.id        = channelId(ch.name) + '_msgcount';
+        msgCount.textContent = (ch.messages || []).length + 'm';
 
         const dot = document.createElement('span');
         dot.className = 'unread-dot';
         dot.id        = channelId(ch.name) + '_dot';
         dot.hidden    = true;
 
-        btn.append(hash, label, dot);
+        btn.append(hash, label, userCount, msgCount, dot);
         li.appendChild(btn);
         list.appendChild(li);
     });
@@ -281,6 +292,13 @@ function startSSE() {
                 if (!Array.isArray(messages) || messages.length === 0) return;
 
                 renderMessages(ch.name, messages, true);
+
+                // Increment message count badge
+                const counter = msgCountEl(ch.name);
+                if (counter) {
+                    const current = parseInt(counter.textContent, 10) || 0;
+                    counter.textContent = (current + messages.length) + 'm';
+                }
 
                 // Show unread dot when this isn't the active channel
                 if (ch.name !== activeChannel) {
