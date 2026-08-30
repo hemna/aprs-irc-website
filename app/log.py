@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from rich.console import Console, ConsoleRenderable, RenderableType
     from rich.table import Table
 
-#from . import utils
+# from . import utils
 import utils
 
 CONF = cfg.CONF
@@ -111,8 +111,10 @@ class APRSDRichLogRender(LogRender):
 class APRSDRichHandler(RichHandler):
     """APRSD's extension of rich's RichHandler to show threads.
 
-        show_thread (bool, optional): Show the name of the thread in log entry. Defaults to False.
-        thread_width (int, optional): The number of characters to show for thread name. Defaults to 10.
+        show_thread (bool, optional): Show the name of the thread in log entry.
+            Defaults to False.
+        thread_width (int, optional): The number of characters to show for thread name.
+            Defaults to 10.
      """
 
     def __init__(
@@ -146,7 +148,8 @@ class APRSDRichHandler(RichHandler):
         Args:
             record (LogRecord): logging Record.
             traceback (Optional[Traceback]): Traceback instance or None for no Traceback.
-            message_renderable (ConsoleRenderable): Renderable (typically Text) containing log message contents.
+            message_renderable (ConsoleRenderable): Renderable (typically Text)
+                containing log message contents.
 
         Returns:
             ConsoleRenderable: Renderable to display log.
@@ -245,9 +248,3 @@ def setup_logging(app, gunicorn=False):
         uvicorn_log.addHandler(rh)
 
     return LOG
-
-
-
-
-
-

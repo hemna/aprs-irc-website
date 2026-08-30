@@ -1,12 +1,10 @@
-import aprsd.conf.common
 import click
 import datetime
 import json
 import logging as python_logging
-import sys
+import os
 
 from oslo_config import cfg
-from aprsd_irc_extension import conf
 from aprsd_irc_extension.db import models
 from aprsd.threads import stats as stats_threads
 
@@ -55,7 +53,6 @@ app = FastAPI()
 
 
 def fetch_stats():
-    import os
     now = datetime.datetime.now()
     time_format = "%m-%d-%Y %H:%M:%S"
 
@@ -82,16 +79,15 @@ def fetch_stats():
     }
 
 
-def create_app () -> FastAPI:
+def create_app(config_file: str = None) -> FastAPI:
     global app, LOG
 
-    #conf_file = utils.DEFAULT_CONFIG_FILE
-    conf_file = "config/aprsd_irc.conf"
-    config_file = ["--config-file", conf_file]
+    conf_file = config_file or os.environ.get(
+        "APRS_IRC_TEST_CONFIG", "config/aprsd_irc.conf"
+    )
+    _config_args = ["--config-file", conf_file]
 
-    log_level = "DEBUG"
-
-    CONF(config_file, project='aprsd_irc', version="1.0.0")
+    CONF(_config_args, project='aprsd_irc', version="1.0.0")
     python_logging.captureWarnings(True)
     app = FastAPI()
     LOG = log.setup_logging(app, gunicorn=True)
@@ -184,12 +180,7 @@ def create_app () -> FastAPI:
 )
 @click.version_option()
 def main(config_file, log_level):
-    global app, LOG
+    global app
 
-    conf_file = config_file
-    if config_file != utils.DEFAULT_CONFIG_FILE:
-        config_file = sys.argv[1:]
-
-    app = create_app(config_file=config_file, log_level=log_level,
-                     gunicorn=False)
+    app = create_app(config_file=config_file)
     app.run(host="0.0.0.0", port=8080, debug=True)
