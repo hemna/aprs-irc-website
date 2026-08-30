@@ -1,6 +1,9 @@
-FROM hemna6969/uvicorn-gunicorn-fastapi:python-3.10
+FROM python:3.11-slim
 
 ENV STATIC_PATH /app/web/static
+
+RUN apt-get update && apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY ./requirements.txt /app/requirements.txt
 
