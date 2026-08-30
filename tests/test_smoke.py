@@ -74,16 +74,13 @@ _ext_db = _stub_module("aprsd_irc_extension.db")
 _ext_models = _stub_module("aprsd_irc_extension.db.models")
 _ext_models.Channel = mock.MagicMock()
 
-# uvicorn stub
+# uvicorn stub — only needed if not installed; setdefault means real uvicorn
+# takes priority when present (CI installs it)
 _stub_module("uvicorn")
 
-# click stub — needs .command(), .option(), etc.
-_click = types.ModuleType("click")
-_click.command = lambda *a, **kw: (lambda f: f)
-_click.option = lambda *a, **kw: (lambda f: f)
-_click.version_option = lambda *a, **kw: (lambda f: f)
-_click.Choice = lambda *a, **kw: None
-sys.modules.setdefault("click", _click)
+# click: DO NOT stub — CI installs the real package, and httpx imports
+# click.argument which a stub would be missing. The real click is always
+# available in this project's deps.
 
 # log stub
 _log_mod = _stub_module("log")
