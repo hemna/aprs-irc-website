@@ -61,15 +61,31 @@ app = FastAPI()
 
 
 def fetch_stats():
-    stats_obj = stats_threads.StatsStore()
-    stats_obj.load()
+    import os
     now = datetime.datetime.now()
     time_format = "%m-%d-%Y %H:%M:%S"
-    stats = {
+
+    # Prefer the JSON stats file (written by aprsd; more reliable than pickle).
+    # Check both the shared /config mount and the local config/ directory.
+    for stats_json_path in ("/config/statsstore.json", "config/statsstore.json"):
+        if os.path.exists(stats_json_path):
+            try:
+                with open(stats_json_path) as f:
+                    data = json.load(f)
+                return {
+                    "time": now.strftime(time_format),
+                    "stats": data,
+                }
+            except Exception:
+                pass
+
+    # Fall back to the StatsStore pickle
+    stats_obj = stats_threads.StatsStore()
+    stats_obj.load()
+    return {
         "time": now.strftime(time_format),
         "stats": stats_obj.data,
     }
-    return stats
 
 
 def create_app () -> FastAPI:
@@ -93,14 +109,18 @@ def create_app () -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
         aprsd_stats = fetch_stats()
+        stats_data = aprsd_stats.get("stats", {})
+        aprs_client = stats_data.get("APRSClientStats", {})
+        server_string = aprs_client.get("server_string", "unknown")
         aprs_connection = (
             "APRS-IS Server: <a href='http://status.aprs2.net' >"
-            "{}</a>".format(aprsd_stats["stats"]["APRSClientStats"]["server_string"])
+            "{}</a>".format(server_string)
         )
 
-        version = aprsd_stats["stats"]["APRSDStats"]["version"]
-        aprsd_version = aprsd_stats["stats"]["APRSDStats"]["version"]
-        uptime = aprsd_stats["stats"]["APRSDStats"].get("uptime")
+        aprsd_stats_data = stats_data.get("APRSDStats", {})
+        version = aprsd_stats_data.get("version", "unknown")
+        aprsd_version = version
+        uptime = aprsd_stats_data.get("uptime")
 
         channels = models.Channel.get_all_channels()
         channels_json = []
