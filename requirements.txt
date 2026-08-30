@@ -1,7 +1,7 @@
 # aprsd — use VCS pin so we get the exact commit the IRC extension was built against.
 # Removed conflicting PyPI specifier (closes #18).
 git+https://github.com/craigerl/aprsd.git#egg=aprsd
--e git+https://github.com/hemna/aprsd-irc-extension.git@db#egg=aprsd_irc_extension
+-e git+https://github.com/hemna/aprsd-irc-extension.git@master#egg=aprsd_irc_extension
 geojson
 requests
 rich
