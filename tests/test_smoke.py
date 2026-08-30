@@ -74,6 +74,17 @@ _ext_db = _stub_module("aprsd_irc_extension.db")
 _ext_models = _stub_module("aprsd_irc_extension.db.models")
 _ext_models.Channel = mock.MagicMock()
 
+# uvicorn stub
+_stub_module("uvicorn")
+
+# click stub — needs .command(), .option(), etc.
+_click = types.ModuleType("click")
+_click.command = lambda *a, **kw: (lambda f: f)
+_click.option  = lambda *a, **kw: (lambda f: f)
+_click.version_option = lambda *a, **kw: (lambda f: f)
+_click.Choice  = lambda *a, **kw: None
+sys.modules.setdefault("click", _click)
+
 # log stub
 _log_mod = _stub_module("log")
 _log_mod.setup_logging = lambda app, gunicorn=False: mock.MagicMock()
