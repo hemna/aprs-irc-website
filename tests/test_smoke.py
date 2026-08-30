@@ -71,8 +71,11 @@ _aprsd_stats.StatsStore = _FakeStatsStore
 _ext = _stub_module("aprsd_irc_extension")
 _ext_conf = _stub_module("aprsd_irc_extension.conf")
 _ext_db = _stub_module("aprsd_irc_extension.db")
+_ext_db_session = _stub_module("aprsd_irc_extension.db.session")
+_ext_db_session.get_session = mock.MagicMock(return_value=mock.MagicMock())
 _ext_models = _stub_module("aprsd_irc_extension.db.models")
 _ext_models.Channel = mock.MagicMock()
+_ext_models.ChannelUsers = mock.MagicMock()
 
 # uvicorn stub — only needed if not installed; setdefault means real uvicorn
 # takes priority when present (CI installs it)
@@ -366,3 +369,95 @@ class TestEventsRoute:
     def test_events_sets_accel_buffering_header(self, tmp_path, minimal_config):
         resp = self._get_events_response(tmp_path, minimal_config)
         assert resp.headers.get("x-accel-buffering") == "no"
+
+
+# ---------------------------------------------------------------------------
+# /admin auth
+# ---------------------------------------------------------------------------
+
+def _admin_conf(password):
+    """Return a mock CONF.web object with admin_password set."""
+    web = mock.MagicMock()
+    web.admin_password = password
+    conf = mock.MagicMock()
+    conf.web = web
+    return conf
+
+
+class TestAdminAuth:
+    def test_admin_no_password_configured_returns_503(self, tmp_path, minimal_config):
+        # admin_password unset (None) → 503 when credentials ARE sent
+        # (HTTPBasic returns 401 before require_admin runs if no credentials at all)
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf(None)):
+            resp = client.get("/admin", auth=("any", "anything"))
+        assert resp.status_code == 503
+
+    def test_admin_wrong_password_returns_401(self, tmp_path, minimal_config):
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf("testpass")):
+            resp = client.get("/admin", auth=("any", "wrongpassword"))
+        assert resp.status_code == 401
+
+    def test_admin_correct_password_returns_200(self, tmp_path, minimal_config):
+        _ext_models.Channel.get_all_channels.return_value = []
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf("testpass")):
+            resp = client.get("/admin", auth=("any", "testpass"))
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+
+
+# ---------------------------------------------------------------------------
+# /admin delete routes
+# ---------------------------------------------------------------------------
+
+class TestAdminDeleteRoutes:
+    def test_delete_channel_unknown_returns_200_with_message(self, tmp_path, minimal_config):
+        _ext_models.Channel.find_by_name = mock.MagicMock(return_value=None)
+        _ext_models.Channel.get_all_channels.return_value = []
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf("testpass")):
+            resp = client.post("/admin/channel/nosuchchan/delete", auth=("any", "testpass"))
+        assert resp.status_code == 200
+        assert "not found" in resp.text
+
+    def test_delete_channel_known_commits_and_returns_200(self, tmp_path, minimal_config):
+        fake_ch = mock.MagicMock()
+        fake_ch.name = "#lounge"
+        _ext_models.Channel.find_by_name = mock.MagicMock(return_value=fake_ch)
+        _ext_models.Channel.get_all_channels.return_value = []
+        fake_session = mock.MagicMock()
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf("testpass")), \
+             mock.patch("aprsd_irc_extension.db.session.get_session", return_value=fake_session):
+            resp = client.post("/admin/channel/%23lounge/delete", auth=("any", "testpass"))
+        assert resp.status_code == 200
+        fake_session.delete.assert_called_once_with(fake_ch)
+        fake_session.commit.assert_called_once()
+
+    def test_delete_user_no_auth_returns_401(self, tmp_path, minimal_config):
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf("testpass")):
+            resp = client.post("/admin/channel/lounge/user/WB4BOR/delete")
+        assert resp.status_code == 401
+
+    def test_delete_user_known_removes_and_returns_200(self, tmp_path, minimal_config):
+        fake_user = mock.MagicMock()
+        fake_ch = mock.MagicMock()
+        fake_ch.name = "#lounge"
+        fake_ch.id = 1
+        _ext_models.Channel.find_by_name = mock.MagicMock(return_value=fake_ch)
+        _ext_models.Channel.get_all_channels.return_value = []
+        fake_session = mock.MagicMock()
+        fake_session.query.return_value.filter.return_value.first.return_value = fake_user
+        client = _make_client(tmp_path, minimal_config)
+        with mock.patch("main.CONF", _admin_conf("testpass")), \
+             mock.patch("aprsd_irc_extension.db.session.get_session", return_value=fake_session):
+            resp = client.post(
+                "/admin/channel/%23lounge/user/WB4BOR/delete",
+                auth=("any", "testpass"),
+            )
+        assert resp.status_code == 200
+        fake_session.delete.assert_called_once_with(fake_user)
+        fake_session.commit.assert_called_once()

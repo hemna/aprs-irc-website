@@ -23,3 +23,17 @@ def minimal_config(tmp_path_factory):
     # Patch create_app's hard-coded path before any import of main happens.
     os.environ["APRS_IRC_TEST_CONFIG"] = str(cfg_file)
     return str(cfg_file)
+
+
+@pytest.fixture
+def minimal_config_with_admin(tmp_path):
+    """Minimal config with admin_password set to 'testpass'."""
+    conf = tmp_path / "test_admin.conf"
+    conf.write_text(
+        "[DEFAULT]\n"
+        "[web]\n"
+        "host_ip = 127.0.0.1\n"
+        "host_port = 80\n"
+        "admin_password = testpass\n"
+    )
+    return str(conf)
