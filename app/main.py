@@ -57,11 +57,7 @@ web_opts = [
 LOG = None
 CONF.register_opts(web_opts, group="web")
 API_KEY_HEADER = "X-Api-Key"
-app = FastAPI(
-    static_url_path="/static",
-    static_folder="web/static",
-    template_folder="web/templates"
-)
+app = FastAPI()
 
 
 def fetch_stats():
@@ -132,7 +128,6 @@ def create_app () -> FastAPI:
     @app.get("/stats")
     async def stats():
         return fetch_stats()
-    return app
 
     @app.get("/messages/{channel}")
     async def messages(channel: str):
@@ -144,6 +139,8 @@ def create_app () -> FastAPI:
                     messages.append(m.to_json())
 
         return messages
+
+    return app
 
 
 @click.command()

@@ -4,7 +4,6 @@ from logging import LogRecord
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Union
 
-from flask.logging import default_handler
 from rich._log_render import LogRender
 from rich.logging import RichHandler
 from rich.text import Text, TextType
@@ -239,13 +238,11 @@ def setup_logging(flask_app, gunicorn=False):
         LOG.setLevel(log_level)
         LOG.addHandler(rh)
 
-        flask_log = logging.getLogger("werkzeug")
-        flask_app.logger.removeHandler(default_handler)
-        # flask_log.removeHandler(default_handler)
-        for h in flask_log.handlers:
-            flask_log.removeHandler(h)
-        flask_log.setLevel(logging.DEBUG)
-        flask_log.addHandler(rh)
+        uvicorn_log = logging.getLogger("uvicorn.access")
+        for h in uvicorn_log.handlers:
+            uvicorn_log.removeHandler(h)
+        uvicorn_log.setLevel(logging.DEBUG)
+        uvicorn_log.addHandler(rh)
 
     return LOG
 
