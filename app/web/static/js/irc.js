@@ -265,33 +265,35 @@ function pollStats() {
         .catch(() => {});  // silently ignore — stats are non-critical
 }
 
-// ── Message polling (issue #13) ───────────────────────────────────────────────
+// ── SSE live updates (closes #23) ────────────────────────────────────────────
 
-function pollChannel(channelName) {
-    const encoded = encodeURIComponent(channelName);
-    fetch(`/messages/${encoded}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(messages => {
-            if (!messages || messages.length === 0) return;
+function startSSE() {
+    const es = new EventSource('/events');
 
-            const knownTs = channelKnownMsgTs[channelName];
-            const newMsgs = messages.filter(m => !knownTs || !knownTs.has(m.timestamp));
-            if (newMsgs.length === 0) return;
+    // Each channel gets its own named event (channel name without leading #).
+    // The server emits:  event: lounge\ndata: [{...}, ...]\n\n
+    if (typeof channels !== 'undefined') {
+        channels.forEach(ch => {
+            const name = ch.name.replace(/^#/, '');
+            es.addEventListener(name, e => {
+                let messages;
+                try { messages = JSON.parse(e.data); } catch { return; }
+                if (!Array.isArray(messages) || messages.length === 0) return;
 
-            renderMessages(channelName, newMsgs, true);
+                renderMessages(ch.name, messages, true);
 
-            // Show unread dot if this channel is not active
-            if (channelName !== activeChannel) {
-                const dot = unreadDotEl(channelName);
-                if (dot) dot.hidden = false;
-            }
-        })
-        .catch(() => {});
-}
+                // Show unread dot when this isn't the active channel
+                if (ch.name !== activeChannel) {
+                    const dot = unreadDotEl(ch.name);
+                    if (dot) dot.hidden = false;
+                }
+            });
+        });
+    }
 
-function pollAllChannels() {
-    if (typeof channels === 'undefined') return;
-    channels.forEach(ch => pollChannel(ch.name));
+    es.onerror = () => {
+        // Browser will auto-reconnect on error; nothing to do here.
+    };
 }
 
 // ── Initialise ────────────────────────────────────────────────────────────────
@@ -308,8 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initHelp();
 
-    // Start polling
+    // Stats still polled (lightweight, non-critical)
     pollStats();
-    setInterval(pollStats,        60_000);
-    setInterval(pollAllChannels,  30_000);
+    setInterval(pollStats, 60_000);
+
+    // Live message updates via SSE (replaces 30s polling)
+    startSSE();
 });

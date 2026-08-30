@@ -1,3 +1,4 @@
+import asyncio
 import click
 import datetime
 import json
@@ -10,7 +11,7 @@ from aprsd_irc_extension.db import models
 from aprsd.threads import stats as stats_threads
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -182,6 +183,63 @@ def create_app(config_file: str = None) -> FastAPI:
             for m in ch.messages.limit(50):
                 result.append(m.to_json())
         return result
+
+    @app.get("/events")
+    async def events():
+        """Server-Sent Events stream — pushes new messages to the client.
+
+        The client opens one persistent EventSource('/events').  Every 2 s the
+        server checks each channel for messages newer than the last-seen
+        timestamp and emits a named SSE event per channel:
+
+            event: lounge
+            data: [{"from_call": "WB4BOR", "message_text": "hello", ...}]
+
+        Closes gracefully when the client disconnects.
+        """
+        async def generator():
+            # Track the newest timestamp we have sent per channel name (no #).
+            last_ts: dict[str, float] = {}
+
+            # Seed with current newest so we only push *new* messages.
+            try:
+                for ch in models.Channel.get_all_channels():
+                    name = ch.name.lstrip('#')
+                    newest = max(
+                        (m.timestamp for m in ch.messages if hasattr(m, 'timestamp')),
+                        default=0,
+                    )
+                    last_ts[name] = newest
+            except Exception:
+                pass
+
+            while True:
+                await asyncio.sleep(2)
+                try:
+                    for ch in models.Channel.get_all_channels():
+                        name = ch.name.lstrip('#')
+                        cutoff = last_ts.get(name, 0)
+                        new_msgs = [
+                            m for m in ch.messages
+                            if hasattr(m, 'timestamp') and m.timestamp > cutoff
+                        ]
+                        if not new_msgs:
+                            continue
+                        last_ts[name] = max(m.timestamp for m in new_msgs)
+                        payload = json.dumps([json.loads(m.to_json()) for m in new_msgs])
+                        yield f"event: {name}\ndata: {payload}\n\n"
+                except Exception:
+                    # DB may be briefly unavailable — skip this tick
+                    pass
+
+        return StreamingResponse(
+            generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",  # disable nginx buffering
+            },
+        )
 
     return app
 
