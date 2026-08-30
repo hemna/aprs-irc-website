@@ -99,7 +99,12 @@ def create_app(config_file: str = None) -> FastAPI:
     #   3. <app-dir>/config/aprsd_irc.conf  (path relative to *this file*, not CWD)
     _app_dir = os.path.dirname(os.path.abspath(__file__))
     _default_conf = os.path.join(_app_dir, "config", "aprsd_irc.conf")
-    conf_file = config_file or os.environ.get("APRS_IRC_TEST_CONFIG") or _default_conf
+    conf_file = (
+        config_file
+        or os.environ.get("APRS_IRC_CONFIG")       # production override
+        or os.environ.get("APRS_IRC_TEST_CONFIG")  # CI/test override
+        or _default_conf
+    )
     _config_args = ["--config-file", conf_file]
 
     CONF(_config_args, project='aprsd_irc', version="1.0.0")
